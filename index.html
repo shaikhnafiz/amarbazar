@@ -36,13 +36,29 @@ body{
 
 h2{text-align:center;margin-top:0;}
 
-button{
-  padding:8px 12px;
-  border:none;
-  border-radius:8px;
-  cursor:pointer;
-  font-weight:bold;
+
+
+
+button {
+  padding: 8px 12px;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: bold;
+  background: #6ebd56; /* normal color, hover/change নেই */
+  color: white;
+  
+  transition: transform 0.1s ease, box-shadow 0.1s ease; /* smooth press effect */
+  position: relative;
 }
+
+/* click (press) effect */
+button:active {
+  transform: translateY(2px); /* নিচে বসা */
+  box-shadow: 0 3px 0 #3d8430, 0 3px 5px rgba(0,0,0,0.2); /* shadow adjust */
+}
+
+
 
 .add-btn{background:#ffb300;}
 .save{background:#2563eb;color:#fff;}
@@ -50,7 +66,7 @@ button{
 .clear{background:#dc2626;color:#fff;}
 .edit{background:#fde047;}
 .del{background:#ef4444;color:#fff;}
-.move{background:#94a3b8;}
+.move{background:lab(99.32% -3.89 5.62);}
 
 input{
   padding:10px;
@@ -170,11 +186,11 @@ input{
 <button class="add-btn" onclick="addItem()">➕ Add Item</button>
 
 <div class="list-header">
-  <div>#</div>
+  <div>নং</div>
   <div>নাম</div>
-  <div>KG</div>
-  <div>৳</div>
-  <div>Action</div>
+  <div>পরিমান</div>
+  <div>দাম</div>
+  <div></div>
 </div>
 
 <div id="list"></div>
@@ -212,7 +228,7 @@ function render(){
     const row=document.createElement("div");
     row.className="list-row";
     row.innerHTML=`
-      <div>${i+1}</div>
+      <div># ${i+1}</div>
 
       <div>
         <span class="mobile-label">নাম</span>
@@ -230,10 +246,10 @@ function render(){
       </div>
 
       <div class="actions">
-        <button class="move" onclick="moveItem(${i},-1)">⬆️</button>
-        <button class="move" onclick="moveItem(${i},1)">⬇️</button>
+        <button class="move" onclick="moveItem(${i},-1)">🔺</button>
+        <button class="move" onclick="moveItem(${i},1)">🔻</button>
         <button class="edit" onclick="editRow(${i},this)">✏️</button>
-        <button class="del" onclick="deleteItem(${i})">❌</button>
+        <button class="del" onclick="deleteItem(${i})">✖️</button>
       </div>
     `;
     list.appendChild(row);
@@ -277,26 +293,72 @@ function toggleDark(){
     document.body.classList.contains("dark"));
 }
 
+
+function isBanglaNumber(qty) {
+  return /^[০-৯]+$/.test(qty); // শুধুমাত্র বাংলা সংখ্যা
+}
+
+function isEnglishNumber(qty) {
+  return /^[0-9]+$/.test(qty); // শুধুমাত্র ইংরেজি সংখ্যা
+}
+
+
 function getText(){
-  let t="",total=0;
-  items.forEach((i,n)=>{
-    total+=i.price;
-    t+=`${n+1}. ${i.name} - ${i.qty} KG - ${i.price} টাকা\n`;
+  // আজকের date
+  const today = new Date();
+  const dd = String(today.getDate()).padStart(2,'0');
+  const mm = String(today.getMonth() + 1).padStart(2,'0'); // মাস 0+1
+  const yyyy = today.getFullYear();
+  const dateStr = `${dd}/${mm}/${yyyy}`; // DD/MM/YYYY
+
+  // শুরুতে date line
+  let t = `Date: ${dateStr}\r\n\r\n`; // \r\n use করলে Windows Notepad এও ঠিক দেখায়
+  let total = 0;
+
+  items.forEach((i, n) => {
+    total += i.price;
+
+    let qtyText = "N/A";
+
+    if (i.qty !== 0 && i.qty !== "" && i.qty != null) {
+      // যদি pure number হয়
+      if (isEnglishNumber(i.qty) || isBanglaNumber(i.qty)) {
+        qtyText = `${i.qty} কেজি`;
+      } 
+      // যদি number + text বা pure text হয়
+      else {
+        qtyText = i.qty;
+      }
+    }
+
+    t += `${n+1}. ${i.name} - ${qtyText} - ${i.price} টাকা\r\n`;
   });
-  return t+`\nমোট: ${total} টাকা`;
+
+  t += `\r\nমোট: ${total} টাকা`;
+
+  return t;
 }
 
 function saveTxt(){
-  const b=new Blob([getText()],{type:"text/plain"});
-  const a=document.createElement("a");
-  a.href=URL.createObjectURL(b);
-  a.download="BazarList.txt";
+  const today = new Date();
+  const yyyy = today.getFullYear();
+  const mm = String(today.getMonth() + 1).padStart(2, '0');
+  const dd = String(today.getDate()).padStart(2, '0');
+
+  const dateFile = `${yyyy}-${mm}-${dd}`; // file name এর জন্য
+
+  // Blob তৈরি
+  const b = new Blob([getText()], {type: "text/plain;charset=utf-8"});
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(b);
+  a.download = `BazarList_${dateFile}.txt`;
   a.click();
 }
 
 function sendWhatsApp(){
-  window.open("https://wa.me/?text="+encodeURIComponent(getText()));
+  window.open("https://wa.me/?text=" + encodeURIComponent(getText()));
 }
+
 
 function clearAll(){
   if(confirm("সব মুছবেন?")){
