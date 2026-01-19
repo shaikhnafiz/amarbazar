@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+<meta charset="UTF-8">
+<title>Bazar List</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<style>
+  :root{
+    --bg:#ffffff;
+    --card:#eff2eb;
+    --text:#1a1a1a;
+    --row:#ffffff00;  /* Mobile row semi-transparent */
+  }
+.dark{
+  --bg:#0f172a;
+  --card:#162465;
+  --text:#ffffff;
+  --row:#1f293300;
+}
+
+body{
+  margin:0;
+  font-family:Arial, sans-serif;
+  background:var(--bg);
+  color:var(--text);
+}
+
+.container{
+  max-width:900px;
+  margin:16px auto;
+  background:var(--card);
+  padding:24px 20px;
+  border-radius:16px;
+}
+
+h2{text-align:center;margin-top:0;}
+
+button{
+  padding:8px 12px;
+  border:none;
+  border-radius:8px;
+  cursor:pointer;
+  font-weight:bold;
+}
+
+.add-btn{background:#ffb300;}
+.save{background:#2563eb;color:#fff;}
+.wa{background:#22c55e;color:#fff;}
+.clear{background:#dc2626;color:#fff;}
+.edit{background:#fde047;}
+.del{background:#ef4444;color:#fff;}
+.move{background:#94a3b8;}
+
+input{
+  padding:10px;
+  width:100%;
+  box-sizing:border-box;
+  border-radius:8px;
+  border:1px solid #ccc;
+  font-size:15px;
+}
+
+/* ===== Add Item inputs ===== */
+.add-row{
+  display:grid;
+  grid-template-columns:3fr 1.5fr 1.2fr;
+  gap:12px;
+  margin:18px 0;
+}
+
+.add-row input{
+  height:48px;
+  font-size:16px;
+}
+
+/* ===== List ===== */
+.list-header,.list-row{
+  display:grid;
+  grid-template-columns:35px 2.3fr .9fr .9fr 200px;
+  gap:8px;
+  align-items:center;
+}
+
+.list-header{font-weight:bold;}
+
+.list-row{
+  background:var(--row);
+  padding:8px;
+  border-radius:10px;
+  margin-top:8px;
+}
+
+.actions{
+  display:flex;
+  gap:6px;
+}
+
+/* ===== Mobile label ===== */
+.mobile-label{
+  display:none;
+  font-size:13px;
+  font-weight:bold;
+  margin-bottom:4px;
+  opacity:.8;
+}
+
+.total{
+  text-align:center;
+  font-weight:bold;
+  margin:16px 0;
+}
+
+/* ===== Mobile ===== */
+@media(max-width:600px){
+
+   :root{
+    --bg:#ffffff;
+    --card:#eff2eb;
+    --text:#1a1a1a;
+    --row:#ffffffde;  /* Mobile row semi-transparent */
+  }
+
+  .dark{
+  --bg:#0f172a;
+  --card:#162465;
+  --text:#ffffff;
+  --row:#c6c6c665;
+}
+
+  .add-row{
+    grid-template-columns:1fr;
+    row-gap:12px;
+  }
+
+  .list-header{
+    display:none;
+  }
+
+  .list-row{
+    grid-template-columns:1fr;
+    gap:10px;
+  }
+
+  .mobile-label{
+    display:block;
+  }
+
+  .actions{
+    justify-content:space-between;
+  }
+}
+</style>
+</head>
+
+<body>
+<div class="container">
+
+<h2>🛒 বাজার লিস্ট</h2>
+
+<button onclick="toggleDark()">🌙 Dark Mode</button>
+
+<!-- Add Item -->
+<div class="add-row">
+  <input id="itemName" placeholder="পণ্যের নাম">
+  <input id="itemQty" placeholder="পরিমান (KG)">
+  <input id="itemPrice" type="number" placeholder="দাম (৳)">
+</div>
+
+<button class="add-btn" onclick="addItem()">➕ Add Item</button>
+
+<div class="list-header">
+  <div>#</div>
+  <div>নাম</div>
+  <div>KG</div>
+  <div>৳</div>
+  <div>Action</div>
+</div>
+
+<div id="list"></div>
+
+<div class="total">মোট: <span id="total">0</span> টাকা</div>
+
+<button class="save" onclick="saveTxt()">💾 Save TXT</button>
+<button class="wa" onclick="sendWhatsApp()">📤 WhatsApp</button>
+<button class="clear" onclick="clearAll()">🗑️ Clear</button>
+
+</div>
+
+<script>
+let items = JSON.parse(localStorage.getItem("bazar_v8")) || [];
+let dark = localStorage.getItem("dark_v8")==="true";
+if(dark) document.body.classList.add("dark");
+
+function addItem(){
+  if(!itemName.value.trim()) return alert("নাম দিন");
+  items.push({
+    name:itemName.value,
+    qty:itemQty.value,
+    price:Number(itemPrice.value)
+  });
+  itemName.value=itemQty.value=itemPrice.value="";
+  render();
+}
+
+function render(){
+  list.innerHTML="";
+  let total=0;
+
+  items.forEach((it,i)=>{
+    total+=it.price;
+    const row=document.createElement("div");
+    row.className="list-row";
+    row.innerHTML=`
+      <div>${i+1}</div>
+
+      <div>
+        <span class="mobile-label">নাম</span>
+        <input value="${it.name}" disabled>
+      </div>
+
+      <div>
+        <span class="mobile-label">পরিমান (KG)</span>
+        <input value="${it.qty}" disabled>
+      </div>
+
+      <div>
+        <span class="mobile-label">দাম (৳)</span>
+        <input type="number" value="${it.price}" disabled>
+      </div>
+
+      <div class="actions">
+        <button class="move" onclick="moveItem(${i},-1)">⬆️</button>
+        <button class="move" onclick="moveItem(${i},1)">⬇️</button>
+        <button class="edit" onclick="editRow(${i},this)">✏️</button>
+        <button class="del" onclick="deleteItem(${i})">❌</button>
+      </div>
+    `;
+    list.appendChild(row);
+  });
+
+  totalEl.innerText=total;
+  localStorage.setItem("bazar_v8",JSON.stringify(items));
+}
+
+function moveItem(i,dir){
+  const n=i+dir;
+  if(n<0||n>=items.length) return;
+  [items[i],items[n]]=[items[n],items[i]];
+  render();
+}
+
+function editRow(i,btn){
+  const row=btn.closest(".list-row");
+  const inputs=row.querySelectorAll("input");
+  if(btn.innerText==="✏️"){
+    inputs.forEach(x=>x.disabled=false);
+    btn.innerText="✅";
+  }else{
+    items[i]={
+      name:inputs[0].value,
+      qty:inputs[1].value,
+      price:Number(inputs[2].value)
+    };
+    render();
+  }
+}
+
+function deleteItem(i){
+  items.splice(i,1);
+  render();
+}
+
+function toggleDark(){
+  document.body.classList.toggle("dark");
+  localStorage.setItem("dark_v8",
+    document.body.classList.contains("dark"));
+}
+
+function getText(){
+  let t="",total=0;
+  items.forEach((i,n)=>{
+    total+=i.price;
+    t+=`${n+1}. ${i.name} - ${i.qty} KG - ${i.price} টাকা\n`;
+  });
+  return t+`\nমোট: ${total} টাকা`;
+}
+
+function saveTxt(){
+  const b=new Blob([getText()],{type:"text/plain"});
+  const a=document.createElement("a");
+  a.href=URL.createObjectURL(b);
+  a.download="BazarList.txt";
+  a.click();
+}
+
+function sendWhatsApp(){
+  window.open("https://wa.me/?text="+encodeURIComponent(getText()));
+}
+
+function clearAll(){
+  if(confirm("সব মুছবেন?")){
+    items=[];
+    localStorage.removeItem("bazar_v8");
+    render();
+  }
+}
+
+const list=document.getElementById("list");
+const totalEl=document.getElementById("total");
+render();
+</script>
+</body>
+</html>
